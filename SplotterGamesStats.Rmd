@@ -1,0 +1,186 @@
+---
+title: "Splotter game statistics"
+author: "David R. Clark"
+date: "2024-03-12"
+output:
+  pdf_document:
+    toc: yes
+    number_sections: yes
+  editor_options:
+    chunk_output_type: console
+  word_document:
+    toc: yes
+header-includes:
+- \usepackage{caption}
+- \captionsetup[figure]{labelformat=empty}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(plyr)
+require(tidyverse)
+require(tidylog)
+require(methods)
+
+```
+\section{Introduction}
+
+\subsection{Overall summary}
+
+This document contains summary statistics and graphs for all splotter games. This project is for providing summary statistics for the Splotter games convention in Pittsburgh in 2024. This data was collected from logged user plays and collections in the boardgamegeek.com (hereafter bgg) api. It should be noted that these are self reported ownership and play statistics and therefore may not fully encompass all plays or owned games of entire splotter fan base. 
+
+```{r load in packages for working with splotter data, include=TRUE, message=FALSE}
+
+#Read in dataframe
+Splottergames<-read.csv("Splottergames.csv")
+
+#View the dataframe
+View(Splottergames)
+
+
+#####Renaming columns of dataframe to something a bit more intutive####
+Splottergames1<-Splottergames%>%
+  select(-ID)%>%
+  rename(AverageRating = ratings.average, 
+         StdDevRatings = ratings.stddev, 
+         Ownedcopies = ratings.owned,
+         Weight = ratings.averageweight,
+         numberofweights = ratings.numweights
+         )
+
+Splottergames1
+
+```
+
+
+\subsection{Explanation of data}
+\textbf{AverageRating}: The average rating of all user ratings for each splotter game. The scale for this goes from 1-10 with users usually rating in round numbers, however select few rate down to 0.01 \newline
+\textbf{StdDevRatings}: The standard deviation  of all user ratings for each splotter game. The scale for this goes from 1-10 with users usually rating in round numbers, however select few rate down to 0.01. \newline
+\textbf{Ownedcopies}: Number of reported own copies of each game on baordgamegeek \newline
+\textbf{Weight}: Average weight of all user submitted weights of each game. Scale goes from 1-5 where 1 is typically a game with lighter ruleset/depth and 5 is heaviest ruleset/depth. \newline
+\textbf{numberofweights}: Number of individuals who voted on the weight of a game. \newline
+\textbf{PLays}: Number of recorded plays of each game on boardgamegeek.\newline
+\textbf{ranking}: Overall ranking of each game out of all boardgames listed on boardgame geek (over 25,000)\newline
+\textbf{name}: Name or abbreviated name of each game \newline
+
+\section{First lets calculate some summary statistics for all splotter games.}
+
+\subsection{How many total copies of splotter games do people reportedly own on bgg?}
+
+```{r total owned splotter games recorded on bgg}
+#Sum total of all splotter games owned by bgg users
+sum(Splottergames1$Ownedcopies)
+
+```
+
+There are a total of 58,093 owned copies of all splotter games on bgg. 
+
+\subsection{What are the total recorded plays across all published splotter games on bgg?}
+
+```{r total plays of splotter games recorded on bgg}
+#Sum total of all splotter games owned by bgg users
+sum(Splottergames1$Plays)
+
+```
+
+There are a recorded 111,052 plays across all published splotter games on bgg. 
+
+\subsection{What is the median rating across all published splotter games on bgg?}
+
+```{r median rating of splotter games on bgg}
+#Calculate median rating of splotter games
+median(Splottergames1$AverageRating)
+
+```
+
+Splotter games have an median rating of 6.78/10 in the bgg rating system. 
+
+
+\subsection{What is the median weight of splotter games on bgg?}
+
+```{r median weight of splotter games on bgg}
+#Calculate median rating of splotter games
+median(Splottergames1$Weight)
+```
+
+The median weight of splotter games on bgg is 3.581/5.  
+
+\subsection{How many splotter games are within the top 500 ranked games on bgg?}
+
+```{r splotter games in the top 500 on bgg}
+#Subseting to games only ranked within the top 500
+Splottergames2<-Splottergames1 %>%
+  filter(ranking < 500)%>%
+  select(name, ranking)%>%
+  as_tibble()
+
+#Show the number of games in the top 500
+nrow(Splottergames2)
+
+#Print names of games in the top 500
+Splottergames2
+```
+
+There are  4 splotter games in the top 500 of games on bgg.
+
+
+\section{Top 5 played splotter games, their weights, and their overall ranking}
+
+\subsection{What are the top 5 most played splotter games and what is their weight and average rating?}
+
+```{r top 5 played splotter games}
+#Subseting to top 5 games and ranking them by plays
+Splottergames3<-Splottergames1 %>%
+  mutate(Playrank=min_rank(desc(Plays)))%>%
+  filter(Playrank<=5)%>%
+  arrange(Playrank)%>%
+  select(name, Playrank, AverageRating, Ownedcopies, Weight, Plays, ranking)%>%
+  as_tibble()
+
+
+#Print the top 5 games
+Splottergames3
+```
+
+\subsection{Visual of the number of plays of each of the top 5 played splotter games}
+
+```{r visual for top 5 played splotter games}
+#assign some details to help our visualization of data
+level_order<-c("FCM", "The Great Zimbabwe", "Indonesia", "Bus","Antiquity")
+
+
+#Quick visual of number of copeis owned of top 5 splotter games
+ggplot(Splottergames3 )+
+  geom_col(aes(x=name, y=Plays, fill=name))+
+  scale_x_discrete(limits=level_order)+
+  scale_fill_manual(values=c("gold","yellow1","brown2", "darkgoldenrod3", "cornflowerblue"))+
+  theme_classic()+
+  theme(legend.position="none")+
+  theme(text=element_text(size=14))+
+  xlab(" ")+
+  ylab("Number of logged plays")
+
+
+```
+
+\subsection{Number of owned copies of each of the top 5 splotter games}
+
+```{r visual for top 5 played splotter games by owned copies}
+#assign some details to help our visualization of data
+level_order2<-c("FCM", "The Great Zimbabwe","Antiquity", "Indonesia", "Bus")
+
+
+#Quick visual of number of plays of top 5 splotter games
+ggplot(Splottergames3 )+
+  geom_col(aes(x=name, y=Ownedcopies, fill=name))+
+  scale_x_discrete(limits=level_order2)+
+  scale_fill_manual(values=c("gold","yellow1","brown2", "darkgoldenrod3", "cornflowerblue"))+
+  theme_classic()+
+  theme(legend.position="none")+
+  theme(text=element_text(size=14))+
+  xlab(" ")+
+  ylab("Owned copies of each game by bgg users")
+
+
+```
